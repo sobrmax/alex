@@ -1,1 +1,54 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #111827;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel font style for buttons */
+button {
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Selection color */
+::selection {
+  background: #dc2626;
+  color: #fff;
+}
