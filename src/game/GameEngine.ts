@@ -37,6 +37,9 @@ export class GameEngine {
     this.boss = this.createBoss();
     this.initLevel();
     this.setupInput();
+
+    // Initial render so canvas isn't blank
+    this.render();
   }
 
   createPlayer(): Player {
@@ -423,11 +426,16 @@ export class GameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // Always render background
+    ctx.save();
+    ctx.translate(-this.camera.x, 0);
+    this.renderBackground(ctx);
+    ctx.restore();
+
     if (this.state === 'playing' || this.state === 'victory' || this.state === 'gameover') {
       ctx.save();
       ctx.translate(-this.camera.x, 0);
 
-      this.renderBackground(ctx);
       this.renderPlatforms(ctx);
       this.renderCollectibles(ctx);
       this.renderEnemies(ctx);
@@ -443,6 +451,83 @@ export class GameEngine {
         this.renderBossHP(ctx);
       }
     }
+
+    // Render menu title on canvas for visual feedback
+    if (this.state === 'menu') {
+      this.renderMenuBackground(ctx);
+    }
+  }
+
+  renderMenuBackground(ctx: CanvasRenderingContext2D) {
+    const time = this.frameCount * 0.02;
+
+    // Bright ground
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(0, CANVAS_HEIGHT - TILE, CANVAS_WIDTH, TILE);
+    ctx.fillStyle = '#6a6a6a';
+    ctx.fillRect(0, CANVAS_HEIGHT - TILE, CANVAS_WIDTH, 4);
+
+    // Buildings
+    const buildings = [
+      { x: 50, w: 80, h: 200 },
+      { x: 160, w: 60, h: 150 },
+      { x: 250, w: 100, h: 250 },
+      { x: 380, w: 70, h: 180 },
+      { x: 480, w: 90, h: 220 },
+      { x: 600, w: 75, h: 160 },
+      { x: 700, w: 85, h: 200 },
+    ];
+
+    buildings.forEach((b, i) => {
+      ctx.fillStyle = '#1a1a3e';
+      ctx.fillRect(b.x, CANVAS_HEIGHT - TILE - b.h, b.w, b.h);
+      // Windows
+      for (let wy = 15; wy < b.h - 10; wy += 20) {
+        for (let wx = 10; wx < b.w - 10; wx += 18) {
+          const lit = Math.sin(time * 0.5 + i + wy * 0.1 + wx * 0.1) > 0;
+          ctx.fillStyle = lit ? '#ffdd57' : '#2a2a4e';
+          ctx.fillRect(b.x + wx, CANVAS_HEIGHT - TILE - b.h + wy, 8, 12);
+        }
+      }
+    });
+
+    // Floating particles
+    ctx.fillStyle = 'rgba(255, 221, 87, 0.6)';
+    for (let i = 0; i < 30; i++) {
+      const x = (Math.sin(time + i * 1.3) * 0.5 + 0.5) * CANVAS_WIDTH;
+      const y = (Math.cos(time * 0.7 + i * 0.9) * 0.5 + 0.5) * (CANVAS_HEIGHT - 100);
+      ctx.fillRect(x, y, 3, 3);
+    }
+
+    // Draw Alex in center-bottom
+    const alexX = CANVAS_WIDTH / 2 - 14;
+    const alexY = CANVAS_HEIGHT - TILE - 48 + Math.sin(time * 2) * 3;
+    // Head
+    ctx.fillStyle = '#ffcc99';
+    ctx.fillRect(alexX + 6, alexY + 2, 16, 16);
+    // Hair
+    ctx.fillStyle = '#3d2b1f';
+    ctx.fillRect(alexX + 6, alexY, 16, 5);
+    // Glasses
+    ctx.fillStyle = '#87ceeb';
+    ctx.fillRect(alexX + 9, alexY + 8, 4, 3);
+    ctx.fillRect(alexX + 17, alexY + 8, 4, 3);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(alexX + 8, alexY + 7, 6, 5);
+    ctx.fillRect(alexX + 16, alexY + 7, 6, 5);
+    ctx.fillStyle = '#87ceeb';
+    ctx.fillRect(alexX + 9, alexY + 8, 4, 3);
+    ctx.fillRect(alexX + 17, alexY + 8, 4, 3);
+    // Body (suit)
+    ctx.fillStyle = '#6b6b6b';
+    ctx.fillRect(alexX + 4, alexY + 16, 20, 20);
+    // Tie
+    ctx.fillStyle = '#cc0000';
+    ctx.fillRect(alexX + 13, alexY + 18, 2, 14);
+    // Legs
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(alexX + 6, alexY + 34, 7, 10);
+    ctx.fillRect(alexX + 15, alexY + 34, 7, 10);
   }
 
   renderBackground(ctx: CanvasRenderingContext2D) {

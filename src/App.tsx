@@ -1,153 +1,231 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { GameEngine } from './game/GameEngine';
 import { GameState } from './game/types';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>('menu');
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const animFrameRef = useRef<number>(0);
+  const [docsCount, setDocsCount] = useState(0);
 
-  const handleStateChange = useCallback((state: GameState) => {
-    setGameState(state);
+  // Callback ref - initializes engine when canvas is mounted
+  const canvasCallbackRef = useCallback((canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return;
+    if (engineRef.current) return; // Already initialized
+
+    const engine = new GameEngine(canvas, (state: GameState) => {
+      setGameState(state);
+    });
+    engineRef.current = engine;
+
+    const gameLoop = () => {
+      if (engine.state === 'playing') {
+        engine.update();
+      } else {
+        engine.frameCount++;
+      }
+      engine.render();
+      setDocsCount(engine.docsCollected);
+      animFrameRef.current = requestAnimationFrame(gameLoop);
+    };
+    animFrameRef.current = requestAnimationFrame(gameLoop);
   }, []);
 
-  const [gameKey, setGameKey] = useState(0);
-
-  useEffect(() => {
-    if (gameState === 'playing' && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const engine = new GameEngine(canvas, handleStateChange);
-      engineRef.current = engine;
-
-      const gameLoop = () => {
-        engine.update();
-        engine.render();
-        animFrameRef.current = requestAnimationFrame(gameLoop);
-      };
-      gameLoop();
-
-      return () => {
-        cancelAnimationFrame(animFrameRef.current);
-        engine.destroy();
-      };
-    }
-  }, [gameState, gameKey, handleStateChange]);
-
   const startGame = () => {
-    setGameState('playing');
+    if (engineRef.current) {
+      engineRef.current.startGame();
+      setGameState('playing');
+    }
   };
 
   const restartGame = () => {
-    setGameKey(k => k + 1);
-    setGameState('playing');
+    if (engineRef.current) {
+      engineRef.current.startGame();
+      setGameState('playing');
+    }
+  };
+
+  const goToMenu = () => {
+    if (engineRef.current) {
+      engineRef.current.state = 'menu';
+    }
+    setGameState('menu');
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center overflow-hidden">
-      {/* Menu Screen */}
-      {gameState === 'menu' && (
-        <div className="flex flex-col items-center justify-center text-center animate-fade-in">
-          <div className="mb-8">
-            <h1 className="text-5xl md:text-7xl font-bold text-yellow-400 mb-2 tracking-wider"
-                style={{ fontFamily: 'monospace', textShadow: '3px 3px 0 #b91c1c, 6px 6px 0 #000' }}>
-              АЛЕКС
-            </h1>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-2"
-                style={{ fontFamily: 'monospace', textShadow: '2px 2px 0 #dc2626' }}>
-              НАНОСИТ
-            </h2>
-            <h2 className="text-4xl md:text-6xl font-bold text-red-500"
-                style={{ fontFamily: 'monospace', textShadow: '2px 2px 0 #000, 4px 4px 0 #7f1d1d' }}>
-              ОТВЕТНЫЙ УДАР
-            </h2>
-          </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#111827',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: "'Courier New', monospace",
+      userSelect: 'none',
+      padding: '1rem'
+    }}>
+      {/* Game container */}
+      <div style={{ position: 'relative', border: '4px solid #374151', borderRadius: '8px', overflow: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
+        <canvas
+          ref={canvasCallbackRef}
+          width={800}
+          height={500}
+          tabIndex={0}
+          style={{
+            display: 'block',
+            imageRendering: 'pixelated',
+            backgroundColor: '#1a1a2e'
+          }}
+        />
 
-          <div className="mb-8 text-gray-300 text-sm max-w-md px-4">
-            <p className="mb-2">🎮 <strong>Управление:</strong></p>
-            <p>← → или A/D — Движение</p>
-            <p>Пробел / ↑ / W — Прыжок</p>
-            <p className="mt-3 text-yellow-300">Собирай документы и победи TENOS!</p>
-          </div>
-
-          <button
-            onClick={startGame}
-            className="px-12 py-4 bg-red-600 hover:bg-red-500 text-white text-2xl font-bold rounded-lg
-                       border-4 border-yellow-400 transition-all duration-200 hover:scale-110
-                       shadow-lg shadow-red-900/50 active:scale-95"
-            style={{ fontFamily: 'monospace' }}
-          >
-            ▶ СТАРТ
-          </button>
-
-          <div className="mt-12 flex gap-8 text-gray-500 text-xs">
-            <span>📄 Собирай документы</span>
-            <span>👊 Прыгай на врагов</span>
-            <span>💀 Победи босса TENOS</span>
-          </div>
-        </div>
-      )}
-
-      {/* Game Canvas */}
-      {(gameState === 'playing' || gameState === 'victory' || gameState === 'gameover') && (
-        <div className="relative">
-          <canvas
-            ref={canvasRef}
-            width={800}
-            height={500}
-            className="border-4 border-gray-700 rounded-lg shadow-2xl shadow-black/50"
-            style={{ imageRendering: 'pixelated' }}
-          />
-
-          {/* Victory Overlay */}
-          {gameState === 'victory' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg">
-              <h2 className="text-5xl font-bold text-yellow-400 mb-4 animate-bounce"
-                  style={{ fontFamily: 'monospace', textShadow: '2px 2px 0 #000' }}>
-                🏆 ПОБЕДА!
+        {/* Menu Overlay */}
+        {gameState === 'menu' && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(17, 24, 39, 0.88)',
+            zIndex: 10
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <h1 style={{
+                fontSize: 'clamp(2rem, 6vw, 3.5rem)',
+                fontWeight: 'bold',
+                color: '#facc15',
+                marginBottom: '0.25rem',
+                textShadow: '3px 3px 0 #b91c1c, 6px 6px 0 #000',
+                letterSpacing: '0.1em',
+                fontFamily: 'monospace'
+              }}>
+                АЛЕКС
+              </h1>
+              <h2 style={{
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#ffffff',
+                marginBottom: '0.25rem',
+                textShadow: '2px 2px 0 #dc2626',
+                fontFamily: 'monospace'
+              }}>
+                НАНОСИТ
               </h2>
-              <p className="text-xl text-green-400 mb-2" style={{ fontFamily: 'monospace' }}>
-                TENOS повержен!
-              </p>
-              <p className="text-lg text-white mb-6" style={{ fontFamily: 'monospace' }}>
-                Документов собрано: {engineRef.current?.docsCollected || 0} / 50
-              </p>
-              <button
-                onClick={restartGame}
-                className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white text-xl font-bold rounded-lg
-                           border-2 border-green-300 transition-all hover:scale-105"
-                style={{ fontFamily: 'monospace' }}
-              >
-                ИГРАТЬ СНОВА
-              </button>
-            </div>
-          )}
-
-          {/* Game Over Overlay */}
-          {gameState === 'gameover' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg">
-              <h2 className="text-5xl font-bold text-red-500 mb-4"
-                  style={{ fontFamily: 'monospace', textShadow: '2px 2px 0 #000' }}>
-                💀 GAME OVER
+              <h2 style={{
+                fontSize: 'clamp(1.8rem, 5vw, 2.5rem)',
+                fontWeight: 'bold',
+                color: '#ef4444',
+                textShadow: '2px 2px 0 #000, 4px 4px 0 #7f1d1d',
+                fontFamily: 'monospace'
+              }}>
+                ОТВЕТНЫЙ УДАР
               </h2>
-              <p className="text-lg text-gray-300 mb-6" style={{ fontFamily: 'monospace' }}>
-                Алекс не справился...
-              </p>
-              <button
-                onClick={restartGame}
-                className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white text-xl font-bold rounded-lg
-                           border-2 border-red-300 transition-all hover:scale-105"
-                style={{ fontFamily: 'monospace' }}
-              >
-                ПОПРОБОВАТЬ СНОВА
-              </button>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Footer */}
-      <div className="mt-4 text-gray-600 text-xs" style={{ fontFamily: 'monospace' }}>
+            <div style={{ margin: '1.5rem 0', color: '#d1d5db', fontSize: '0.875rem', textAlign: 'center', padding: '0 1rem' }}>
+              <p style={{ marginBottom: '0.5rem' }}>🎮 <strong>Управление:</strong></p>
+              <p>← → или A/D — Движение</p>
+              <p>Пробел / ↑ / W — Прыжок</p>
+              <p style={{ marginTop: '0.75rem', color: '#fde047' }}>Собирай документы и победи TENOS!</p>
+            </div>
+
+            <button
+              onClick={startGame}
+              style={{
+                padding: '0.8rem 2.5rem',
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                borderRadius: '0.5rem',
+                border: '4px solid #facc15',
+                cursor: 'pointer',
+                fontFamily: 'monospace',
+                letterSpacing: '0.05em',
+                boxShadow: '0 4px 14px rgba(127, 29, 29, 0.5)'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              ▶ СТАРТ
+            </button>
+
+            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1.5rem', color: '#6b7280', fontSize: '0.7rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <span>📄 Собирай документы</span>
+              <span>👊 Прыгай на врагов</span>
+              <span>💀 Победи TENOS</span>
+            </div>
+          </div>
+        )}
+
+        {/* Victory Overlay */}
+        {gameState === 'victory' && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 10
+          }}>
+            <h2 style={{ fontSize: '3rem', fontWeight: 'bold', color: '#facc15', marginBottom: '1rem', textShadow: '2px 2px 0 #000', fontFamily: 'monospace' }}>
+              🏆 ПОБЕДА!
+            </h2>
+            <p style={{ fontSize: '1.25rem', color: '#4ade80', marginBottom: '0.5rem', fontFamily: 'monospace' }}>TENOS повержен!</p>
+            <p style={{ fontSize: '1rem', color: '#ffffff', marginBottom: '1.5rem', fontFamily: 'monospace' }}>
+              Документов собрано: {docsCount} / 50
+            </p>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={restartGame} style={{
+                padding: '0.75rem 2rem', backgroundColor: '#16a34a', color: '#fff',
+                fontSize: '1.1rem', fontWeight: 'bold', borderRadius: '0.5rem',
+                border: '2px solid #86efac', cursor: 'pointer', fontFamily: 'monospace'
+              }}>ИГРАТЬ СНОВА</button>
+              <button onClick={goToMenu} style={{
+                padding: '0.75rem 2rem', backgroundColor: '#4b5563', color: '#fff',
+                fontSize: '1.1rem', fontWeight: 'bold', borderRadius: '0.5rem',
+                border: '2px solid #9ca3af', cursor: 'pointer', fontFamily: 'monospace'
+              }}>МЕНЮ</button>
+            </div>
+          </div>
+        )}
+
+        {/* Game Over Overlay */}
+        {gameState === 'gameover' && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 10
+          }}>
+            <h2 style={{ fontSize: '3rem', fontWeight: 'bold', color: '#ef4444', marginBottom: '1rem', textShadow: '2px 2px 0 #000', fontFamily: 'monospace' }}>
+              💀 GAME OVER
+            </h2>
+            <p style={{ fontSize: '1rem', color: '#d1d5db', marginBottom: '1.5rem', fontFamily: 'monospace' }}>Алекс не справился...</p>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={restartGame} style={{
+                padding: '0.75rem 2rem', backgroundColor: '#dc2626', color: '#fff',
+                fontSize: '1.1rem', fontWeight: 'bold', borderRadius: '0.5rem',
+                border: '2px solid #fca5a5', cursor: 'pointer', fontFamily: 'monospace'
+              }}>ПОПРОБОВАТЬ СНОВА</button>
+              <button onClick={goToMenu} style={{
+                padding: '0.75rem 2rem', backgroundColor: '#4b5563', color: '#fff',
+                fontSize: '1.1rem', fontWeight: 'bold', borderRadius: '0.5rem',
+                border: '2px solid #9ca3af', cursor: 'pointer', fontFamily: 'monospace'
+              }}>МЕНЮ</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '1rem', color: '#4b5563', fontSize: '0.75rem', fontFamily: 'monospace' }}>
         © 2024 Alex Strikes Back — Retro Platformer
       </div>
     </div>
