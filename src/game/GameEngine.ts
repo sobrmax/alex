@@ -511,6 +511,7 @@ export class GameEngine {
 
   renderMenuBackground(ctx: CanvasRenderingContext2D) {
     const time = this.frameCount * 0.02;
+    const isMobile = window.innerWidth <= 768;
 
     // Bright ground
     ctx.fillStyle = '#4a4a4a';
@@ -518,7 +519,7 @@ export class GameEngine {
     ctx.fillStyle = '#6a6a6a';
     ctx.fillRect(0, CANVAS_HEIGHT - TILE, CANVAS_WIDTH, 4);
 
-    // Buildings
+    // Buildings - fewer on mobile
     const buildings = [
       { x: 50, w: 80, h: 200 },
       { x: 160, w: 60, h: 150 },
@@ -532,19 +533,22 @@ export class GameEngine {
     buildings.forEach((b, i) => {
       ctx.fillStyle = '#1a1a3e';
       ctx.fillRect(b.x, CANVAS_HEIGHT - TILE - b.h, b.w, b.h);
-      // Windows
-      for (let wy = 15; wy < b.h - 10; wy += 20) {
-        for (let wx = 10; wx < b.w - 10; wx += 18) {
-          const lit = Math.sin(time * 0.5 + i + wy * 0.1 + wx * 0.1) > 0;
-          ctx.fillStyle = lit ? '#ffdd57' : '#2a2a4e';
-          ctx.fillRect(b.x + wx, CANVAS_HEIGHT - TILE - b.h + wy, 8, 12);
+      // Windows - skip on mobile
+      if (!isMobile) {
+        for (let wy = 15; wy < b.h - 10; wy += 20) {
+          for (let wx = 10; wx < b.w - 10; wx += 18) {
+            const lit = Math.sin(time * 0.5 + i + wy * 0.1 + wx * 0.1) > 0;
+            ctx.fillStyle = lit ? '#ffdd57' : '#2a2a4e';
+            ctx.fillRect(b.x + wx, CANVAS_HEIGHT - TILE - b.h + wy, 8, 12);
+          }
         }
       }
     });
 
-    // Floating particles
+    // Floating particles - fewer on mobile
+    const particleCount = isMobile ? 15 : 30;
     ctx.fillStyle = 'rgba(255, 221, 87, 0.6)';
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < particleCount; i++) {
       const x = (Math.sin(time + i * 1.3) * 0.5 + 0.5) * CANVAS_WIDTH;
       const y = (Math.cos(time * 0.7 + i * 0.9) * 0.5 + 0.5) * (CANVAS_HEIGHT - 100);
       ctx.fillRect(x, y, 3, 3);
@@ -560,9 +564,6 @@ export class GameEngine {
     ctx.fillStyle = '#3d2b1f';
     ctx.fillRect(alexX + 6, alexY, 16, 5);
     // Glasses
-    ctx.fillStyle = '#87ceeb';
-    ctx.fillRect(alexX + 9, alexY + 8, 4, 3);
-    ctx.fillRect(alexX + 17, alexY + 8, 4, 3);
     ctx.fillStyle = '#333';
     ctx.fillRect(alexX + 8, alexY + 7, 6, 5);
     ctx.fillRect(alexX + 16, alexY + 7, 6, 5);
@@ -582,6 +583,9 @@ export class GameEngine {
   }
 
   renderBackground(ctx: CanvasRenderingContext2D) {
+    // Detect mobile for performance optimization
+    const isMobile = window.innerWidth <= 768;
+    
     // Sky gradient
     const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
     grad.addColorStop(0, '#1a1a2e');
@@ -590,39 +594,47 @@ export class GameEngine {
     ctx.fillStyle = grad;
     ctx.fillRect(this.camera.x, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Clouds (parallax)
+    // Clouds (parallax) - fewer on mobile
+    const cloudCount = isMobile ? 8 : 15;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < cloudCount; i++) {
       const cx = (i * 320 - this.camera.x * 0.2) % (LEVEL_WIDTH + 200);
       const cy = 50 + (i % 3) * 40;
       const cw = 80 + (i % 4) * 20;
       const ch = 30 + (i % 3) * 10;
       ctx.fillRect(cx, cy, cw, ch);
-      ctx.fillRect(cx + 20, cy - 10, cw - 40, ch);
-      ctx.fillRect(cx + 40, cy - 15, cw - 60, ch);
+      if (!isMobile) {
+        ctx.fillRect(cx + 20, cy - 10, cw - 40, ch);
+        ctx.fillRect(cx + 40, cy - 15, cw - 60, ch);
+      }
     }
 
-    // City buildings in background (parallax)
+    // City buildings in background (parallax) - fewer on mobile
+    const buildingCount = isMobile ? 15 : 30;
     ctx.fillStyle = '#1a1a3e';
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < buildingCount; i++) {
       const bx = i * 180 - (this.camera.x * 0.3) % 180;
       const bh = 80 + Math.sin(i * 2.5) * 40;
       ctx.fillRect(bx + this.camera.x, CANVAS_HEIGHT - TILE - bh, 60, bh);
-      // Windows
-      ctx.fillStyle = '#ffdd57';
-      for (let wy = 0; wy < bh - 20; wy += 20) {
-        for (let wx = 8; wx < 52; wx += 16) {
-          if (Math.sin(i * 3 + wy + wx) > 0) {
-            ctx.fillRect(bx + this.camera.x + wx, CANVAS_HEIGHT - TILE - bh + 10 + wy, 8, 10);
+      
+      // Windows - skip on mobile for performance
+      if (!isMobile) {
+        ctx.fillStyle = '#ffdd57';
+        for (let wy = 0; wy < bh - 20; wy += 20) {
+          for (let wx = 8; wx < 52; wx += 16) {
+            if (Math.sin(i * 3 + wy + wx) > 0) {
+              ctx.fillRect(bx + this.camera.x + wx, CANVAS_HEIGHT - TILE - bh + 10 + wy, 8, 10);
+            }
           }
         }
+        ctx.fillStyle = '#1a1a3e';
       }
-      ctx.fillStyle = '#1a1a3e';
     }
 
-    // Stars
+    // Stars - fewer on mobile
+    const starCount = isMobile ? 20 : 50;
     ctx.fillStyle = '#ffffff';
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < starCount; i++) {
       const sx = (i * 97 + Math.sin(i) * 30) % LEVEL_WIDTH;
       const sy = (i * 43) % (CANVAS_HEIGHT - 100);
       const size = (i % 3 === 0) ? 2 : 1;
@@ -668,7 +680,9 @@ export class GameEngine {
   }
 
   renderDecorations(ctx: CanvasRenderingContext2D) {
-    // Office boxes scattered around
+    const isMobile = window.innerWidth <= 768;
+    
+    // Office boxes scattered around - fewer on mobile
     const boxPositions = [
       { x: 250, y: CANVAS_HEIGHT - TILE - 30, w: 30, h: 30 },
       { x: 700, y: CANVAS_HEIGHT - TILE - 25, w: 25, h: 25 },
@@ -681,7 +695,9 @@ export class GameEngine {
       { x: 3500, y: CANVAS_HEIGHT - TILE - 34, w: 34, h: 34 },
     ];
 
-    boxPositions.forEach(box => {
+    const visibleBoxes = isMobile ? boxPositions.filter((_, i) => i % 2 === 0) : boxPositions;
+    
+    visibleBoxes.forEach(box => {
       if (box.x < this.camera.x - 50 || box.x > this.camera.x + CANVAS_WIDTH + 50) return;
       
       // Box body
@@ -693,26 +709,30 @@ export class GameEngine {
       // Box tape
       ctx.fillStyle = '#D2B48C';
       ctx.fillRect(box.x + box.w / 2 - 3, box.y, 6, box.h);
-      // Box shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fillRect(box.x + 2, box.y + box.h - 4, box.w - 4, 4);
+      // Box shadow - skip on mobile
+      if (!isMobile) {
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(box.x + 2, box.y + box.h - 4, box.w - 4, 4);
+      }
     });
 
-    // Office chairs
-    const chairPositions = [400, 1000, 1600, 2200, 2800, 3400];
-    chairPositions.forEach(cx => {
-      if (cx < this.camera.x - 50 || cx > this.camera.x + CANVAS_WIDTH + 50) return;
-      
-      const cy = CANVAS_HEIGHT - TILE - 40;
-      // Chair seat
-      ctx.fillStyle = '#2c2c2c';
-      ctx.fillRect(cx, cy + 20, 24, 8);
-      // Chair back
-      ctx.fillRect(cx + 18, cy, 6, 20);
-      // Chair leg
-      ctx.fillStyle = '#555';
-      ctx.fillRect(cx + 10, cy + 28, 4, 12);
-    });
+    // Office chairs - skip on mobile for performance
+    if (!isMobile) {
+      const chairPositions = [400, 1000, 1600, 2200, 2800, 3400];
+      chairPositions.forEach(cx => {
+        if (cx < this.camera.x - 50 || cx > this.camera.x + CANVAS_WIDTH + 50) return;
+        
+        const cy = CANVAS_HEIGHT - TILE - 40;
+        // Chair seat
+        ctx.fillStyle = '#2c2c2c';
+        ctx.fillRect(cx, cy + 20, 24, 8);
+        // Chair back
+        ctx.fillRect(cx + 18, cy, 6, 20);
+        // Chair leg
+        ctx.fillStyle = '#555';
+        ctx.fillRect(cx + 10, cy + 28, 4, 12);
+      });
+    }
 
     // Section signs
     const signs = [
@@ -1004,29 +1024,40 @@ export class GameEngine {
   }
 
   renderHUD(ctx: CanvasRenderingContext2D) {
+    const isMobile = window.innerWidth <= 768;
+    const scale = isMobile ? 0.85 : 1;
+    
     // Documents counter
+    const docBoxWidth = isMobile ? 170 : 200;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, 10, 200, 35);
+    ctx.fillRect(10, 10, docBoxWidth, 35 * scale);
     ctx.strokeStyle = '#ffdd57';
     ctx.lineWidth = 2;
-    ctx.strokeRect(10, 10, 200, 35);
+    ctx.strokeRect(10, 10, docBoxWidth, 35 * scale);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 14px monospace';
-    ctx.fillText(`📄 Документы: ${this.docsCollected} / ${DOCS_TOTAL}`, 20, 32);
+    ctx.font = `bold ${isMobile ? 12 : 14}px monospace`;
+    ctx.fillText(`📄 ${this.docsCollected} / ${DOCS_TOTAL}`, 20, 32 * scale);
 
-    // HP - wider panel for 10 HP
+    // HP - compact for mobile
+    const hpBoxWidth = isMobile ? 170 : 220;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, 50, 220, 25);
+    ctx.fillRect(10, 50 * scale, hpBoxWidth, 25 * scale);
     ctx.strokeStyle = '#ff4444';
-    ctx.strokeRect(10, 50, 220, 25);
+    ctx.strokeRect(10, 50 * scale, hpBoxWidth, 25 * scale);
 
     ctx.fillStyle = '#ff4444';
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText('❤️ HP:', 18, 67);
+    ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
+    ctx.fillText('❤️', 18, 67 * scale);
+    
+    const hpBarStart = isMobile ? 40 : 70;
+    const hpBarWidth = isMobile ? 8 : 10;
+    const hpBarHeight = isMobile ? 10 : 12;
+    const hpBarGap = isMobile ? 10 : 14;
+    
     for (let i = 0; i < this.player.maxHp; i++) {
       ctx.fillStyle = i < this.player.hp ? '#ff4444' : '#333';
-      ctx.fillRect(70 + i * 14, 56, 10, 12);
+      ctx.fillRect(hpBarStart + i * hpBarGap, 56 * scale, hpBarWidth, hpBarHeight);
     }
   }
 
