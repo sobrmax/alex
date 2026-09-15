@@ -1,13 +1,13 @@
 import { Player, Enemy, Boss, Platform, Collectible, Projectile, GameState } from './types';
 
-const GRAVITY = 0.6;
-const JUMP_FORCE = -13;
-const MOVE_SPEED = 4;
+const GRAVITY = 0.5;
+const JUMP_FORCE = -14;
+const MOVE_SPEED = 4.5;
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 500;
 const TILE = 32;
 const LEVEL_WIDTH = 4800;
-const DOCS_TOTAL = 50;
+const DOCS_TOTAL = 60;
 
 export class GameEngine {
   canvas: HTMLCanvasElement;
@@ -46,7 +46,7 @@ export class GameEngine {
     return {
       x: 100, y: 300, width: 28, height: 44,
       vx: 0, vy: 0, onGround: false,
-      facing: 'right', hp: 5, maxHp: 5,
+      facing: 'right', hp: 10, maxHp: 10,
       invincibleTimer: 0, animFrame: 0, animTimer: 0
     };
   }
@@ -69,14 +69,13 @@ export class GameEngine {
     this.boss = this.createBoss();
     this.projectiles = [];
 
-    // Ground platforms with gaps
+    // Ground platforms - fewer gaps, easier to navigate
     const groundSegments = [
-      { start: 0, end: 600 },
-      { start: 680, end: 1400 },
-      { start: 1480, end: 2200 },
-      { start: 2280, end: 3000 },
-      { start: 3080, end: 3800 },
-      { start: 3880, end: LEVEL_WIDTH },
+      { start: 0, end: 800 },
+      { start: 880, end: 1600 },
+      { start: 1680, end: 2400 },
+      { start: 2480, end: 3200 },
+      { start: 3280, end: LEVEL_WIDTH },
     ];
 
     groundSegments.forEach(seg => {
@@ -86,30 +85,49 @@ export class GameEngine {
       });
     });
 
-    // Floating platforms
+    // Floating platforms - more variety, staircases, bridges
     const floatingPlatforms = [
-      { x: 200, y: 340, w: 96 },
-      { x: 400, y: 280, w: 96 },
-      { x: 620, y: 320, w: 64 },
-      { x: 750, y: 250, w: 96 },
-      { x: 950, y: 300, w: 80 },
-      { x: 1100, y: 230, w: 96 },
-      { x: 1300, y: 280, w: 80 },
-      { x: 1420, y: 340, w: 64 },
-      { x: 1550, y: 260, w: 96 },
-      { x: 1750, y: 310, w: 80 },
-      { x: 1900, y: 240, w: 96 },
-      { x: 2100, y: 280, w: 80 },
-      { x: 2220, y: 340, w: 64 },
-      { x: 2400, y: 260, w: 96 },
-      { x: 2600, y: 300, w: 80 },
-      { x: 2800, y: 230, w: 96 },
-      { x: 2950, y: 340, w: 64 },
-      { x: 3100, y: 270, w: 96 },
-      { x: 3300, y: 310, w: 80 },
-      { x: 3500, y: 250, w: 96 },
-      { x: 3700, y: 300, w: 80 },
-      { x: 3850, y: 340, w: 64 },
+      // Section 1: Tutorial area
+      { x: 200, y: 360, w: 80 },
+      { x: 350, y: 300, w: 80 },
+      { x: 500, y: 240, w: 80 },
+      { x: 650, y: 300, w: 80 },
+      
+      // Section 2: Bridge over gap
+      { x: 820, y: 380, w: 60 },
+      { x: 850, y: 320, w: 60 },
+      { x: 880, y: 260, w: 60 },
+      
+      // Section 3: Staircase
+      { x: 1000, y: 380, w: 70 },
+      { x: 1100, y: 320, w: 70 },
+      { x: 1200, y: 260, w: 70 },
+      { x: 1300, y: 200, w: 70 },
+      { x: 1400, y: 260, w: 70 },
+      { x: 1500, y: 320, w: 70 },
+      
+      // Section 4: High platforms
+      { x: 1700, y: 180, w: 90 },
+      { x: 1850, y: 180, w: 90 },
+      { x: 2000, y: 180, w: 90 },
+      
+      // Section 5: Zigzag
+      { x: 2200, y: 350, w: 80 },
+      { x: 2350, y: 280, w: 80 },
+      { x: 2500, y: 210, w: 80 },
+      { x: 2650, y: 280, w: 80 },
+      { x: 2800, y: 350, w: 80 },
+      
+      // Section 6: Long bridge
+      { x: 3000, y: 300, w: 120 },
+      { x: 3150, y: 300, w: 120 },
+      
+      // Section 7: Final approach
+      { x: 3400, y: 340, w: 80 },
+      { x: 3550, y: 280, w: 80 },
+      { x: 3700, y: 220, w: 80 },
+      { x: 3850, y: 280, w: 80 },
+      { x: 4000, y: 340, w: 80 },
     ];
 
     floatingPlatforms.forEach(p => {
@@ -118,41 +136,69 @@ export class GameEngine {
       });
     });
 
-    // Spikes
-    const spikePositions = [500, 1200, 1800, 2500, 3200, 3600];
+    // Spikes - fewer and more visible
+    const spikePositions = [600, 1400, 2100, 2900, 3600];
     spikePositions.forEach(sx => {
       this.platforms.push({
         x: sx, y: CANVAS_HEIGHT - TILE - 16, width: 48, height: 16, type: 'spike'
       });
     });
 
-    // Documents (50 total spread across level)
-    for (let i = 0; i < DOCS_TOTAL; i++) {
-      const x = 150 + (i * (LEVEL_WIDTH - 400) / DOCS_TOTAL);
-      const baseY = 200 + Math.sin(i * 0.7) * 80;
+    // Documents - 60 total, spread across level with variety
+    for (let i = 0; i < 60; i++) {
+      const x = 150 + (i * (LEVEL_WIDTH - 400) / 60);
+      // Vary heights more - some on ground, some on platforms
+      let baseY: number;
+      if (i % 5 === 0) {
+        // On high platforms
+        baseY = 150 + Math.sin(i * 0.8) * 50;
+      } else if (i % 3 === 0) {
+        // On medium platforms
+        baseY = 250 + Math.sin(i * 0.6) * 40;
+      } else {
+        // Near ground level
+        baseY = 380 + Math.sin(i * 0.4) * 30;
+      }
       this.collectibles.push({
-        x: x, y: baseY, width: 20, height: 24,
+        x: x, y: Math.max(100, Math.min(420, baseY)), width: 20, height: 24,
         collected: false, type: 'document'
       });
     }
 
-    // Enemies
+    // Enemies - more variety, slower movement, some on platforms
     const enemyPositions = [
-      { x: 350, patrol: [300, 500] },
-      { x: 800, patrol: [700, 1000] },
-      { x: 1200, patrol: [1100, 1350] },
-      { x: 1600, patrol: [1500, 1750] },
-      { x: 2000, patrol: [1900, 2150] },
-      { x: 2400, patrol: [2300, 2600] },
-      { x: 2800, patrol: [2700, 2950] },
-      { x: 3200, patrol: [3100, 3400] },
-      { x: 3500, patrol: [3400, 3700] },
+      // Section 1 - ground level
+      { x: 300, y: CANVAS_HEIGHT - TILE - 36, patrol: [200, 400], type: 'clerk' as const },
+      { x: 550, y: CANVAS_HEIGHT - TILE - 36, patrol: [500, 700], type: 'robot' as const },
+      
+      // Section 2 - mixed
+      { x: 900, y: CANVAS_HEIGHT - TILE - 36, patrol: [850, 1050], type: 'clerk' as const },
+      { x: 1150, y: CANVAS_HEIGHT - TILE - 36, patrol: [1100, 1300], type: 'robot' as const },
+      { x: 1350, y: CANVAS_HEIGHT - TILE - 36, patrol: [1300, 1500], type: 'clerk' as const },
+      
+      // Section 3 - some on platforms
+      { x: 1750, y: CANVAS_HEIGHT - TILE - 36, patrol: [1700, 1900], type: 'robot' as const },
+      { x: 1850, y: 180 - 36, patrol: [1700, 1940], type: 'clerk' as const }, // On high platform
+      { x: 1950, y: CANVAS_HEIGHT - TILE - 36, patrol: [1900, 2100], type: 'clerk' as const },
+      
+      // Section 4 - platform enemies
+      { x: 2250, y: CANVAS_HEIGHT - TILE - 36, patrol: [2200, 2400], type: 'robot' as const },
+      { x: 2500, y: 210 - 36, patrol: [2500, 2580], type: 'clerk' as const }, // On high platform
+      { x: 2550, y: CANVAS_HEIGHT - TILE - 36, patrol: [2500, 2700], type: 'clerk' as const },
+      { x: 2750, y: CANVAS_HEIGHT - TILE - 36, patrol: [2700, 2900], type: 'robot' as const },
+      
+      // Section 5 - final area
+      { x: 3050, y: 300 - 36, patrol: [3000, 3120], type: 'clerk' as const }, // On bridge
+      { x: 3350, y: CANVAS_HEIGHT - TILE - 36, patrol: [3300, 3500], type: 'robot' as const },
+      { x: 3650, y: CANVAS_HEIGHT - TILE - 36, patrol: [3600, 3800], type: 'clerk' as const },
+      { x: 3900, y: CANVAS_HEIGHT - TILE - 36, patrol: [3850, 4050], type: 'robot' as const },
     ];
 
     enemyPositions.forEach(e => {
       this.enemies.push({
-        x: e.x, y: CANVAS_HEIGHT - TILE - 36, width: 30, height: 36,
-        vx: 1.2, alive: true, type: Math.random() > 0.5 ? 'clerk' : 'robot',
+        x: e.x, y: e.y, width: 30, height: 36,
+        vx: 0.8, // Slower movement
+        alive: true, type: e.type,
         patrolLeft: e.patrol[0], patrolRight: e.patrol[1],
         animFrame: 0
       });
@@ -308,7 +354,7 @@ export class GameEngine {
   damagePlayer(amount: number) {
     if (this.player.invincibleTimer > 0) return;
     this.player.hp -= amount;
-    this.player.invincibleTimer = 90;
+    this.player.invincibleTimer = 120; // Longer invincibility
     if (this.player.hp <= 0) {
       this.state = 'gameover';
       this.onStateChange('gameover');
@@ -332,6 +378,7 @@ export class GameEngine {
       if (!this.bossSpawned && this.player.x > LEVEL_WIDTH - 500) {
         this.boss.alive = true;
         this.bossSpawned = true;
+        this.boss.y = CANVAS_HEIGHT - TILE - this.boss.height; // Ground level
       }
       return;
     }
@@ -339,38 +386,42 @@ export class GameEngine {
     const b = this.boss;
     const p = this.player;
 
-    // Boss AI
+    // Boss AI - ground-based movement
     b.attackTimer++;
 
-    // Movement
-    if (b.attackTimer % 120 < 60) {
-      b.vx = p.x > b.x ? 1.5 : -1.5;
+    // Simple ground movement - walk towards player slowly
+    const distToPlayer = p.x - b.x;
+    if (Math.abs(distToPlayer) > 100) {
+      b.vx = distToPlayer > 0 ? 1 : -1;
     } else {
       b.vx = 0;
     }
+    
     b.x += b.vx;
+    // Keep boss on ground and within arena
     b.x = Math.max(LEVEL_WIDTH - 600, Math.min(LEVEL_WIDTH - 100, b.x));
+    b.y = CANVAS_HEIGHT - TILE - b.height; // Always on ground
 
-    // Attacks
-    if (b.attackTimer % 90 === 0) {
-      // Throw folder projectile
+    // Attacks - slower and simpler
+    if (b.attackTimer % 120 === 0) {
+      // Throw folder projectile (slower)
       this.projectiles.push({
-        x: b.x, y: b.y + 20,
-        vx: p.x > b.x ? -5 : 5,
-        vy: -3,
+        x: b.x + b.width / 2, y: b.y + 20,
+        vx: p.x > b.x ? 3 : -3,
+        vy: -2,
         width: 20, height: 16,
-        type: 'folder', active: true, lifetime: 180
+        type: 'folder', active: true, lifetime: 240
       });
     }
 
-    if (b.attackTimer % 150 === 0 && b.hp < b.maxHp * 0.6) {
-      // Laser from eyes (phase 2)
+    if (b.attackTimer % 200 === 0 && b.hp < b.maxHp * 0.5) {
+      // Laser from eyes (phase 2, slower)
       this.projectiles.push({
-        x: b.x + (p.x > b.x ? b.width : -20), y: b.y + 15,
-        vx: p.x > b.x ? 8 : -8,
+        x: b.x + (p.x > b.x ? b.width : -24), y: b.y + 15,
+        vx: p.x > b.x ? 5 : -5,
         vy: 0,
         width: 24, height: 6,
-        type: 'laser', active: true, lifetime: 60
+        type: 'laser', active: true, lifetime: 90
       });
     }
 
@@ -539,6 +590,18 @@ export class GameEngine {
     ctx.fillStyle = grad;
     ctx.fillRect(this.camera.x, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // Clouds (parallax)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    for (let i = 0; i < 15; i++) {
+      const cx = (i * 320 - this.camera.x * 0.2) % (LEVEL_WIDTH + 200);
+      const cy = 50 + (i % 3) * 40;
+      const cw = 80 + (i % 4) * 20;
+      const ch = 30 + (i % 3) * 10;
+      ctx.fillRect(cx, cy, cw, ch);
+      ctx.fillRect(cx + 20, cy - 10, cw - 40, ch);
+      ctx.fillRect(cx + 40, cy - 15, cw - 60, ch);
+    }
+
     // City buildings in background (parallax)
     ctx.fillStyle = '#1a1a3e';
     for (let i = 0; i < 30; i++) {
@@ -599,6 +662,85 @@ export class GameEngine {
         }
       }
     }
+
+    // Decorative elements - office boxes and furniture
+    this.renderDecorations(ctx);
+  }
+
+  renderDecorations(ctx: CanvasRenderingContext2D) {
+    // Office boxes scattered around
+    const boxPositions = [
+      { x: 250, y: CANVAS_HEIGHT - TILE - 30, w: 30, h: 30 },
+      { x: 700, y: CANVAS_HEIGHT - TILE - 25, w: 25, h: 25 },
+      { x: 1100, y: CANVAS_HEIGHT - TILE - 35, w: 35, h: 35 },
+      { x: 1500, y: CANVAS_HEIGHT - TILE - 28, w: 28, h: 28 },
+      { x: 1900, y: CANVAS_HEIGHT - TILE - 32, w: 32, h: 32 },
+      { x: 2300, y: CANVAS_HEIGHT - TILE - 26, w: 26, h: 26 },
+      { x: 2700, y: CANVAS_HEIGHT - TILE - 30, w: 30, h: 30 },
+      { x: 3100, y: CANVAS_HEIGHT - TILE - 28, w: 28, h: 28 },
+      { x: 3500, y: CANVAS_HEIGHT - TILE - 34, w: 34, h: 34 },
+    ];
+
+    boxPositions.forEach(box => {
+      if (box.x < this.camera.x - 50 || box.x > this.camera.x + CANVAS_WIDTH + 50) return;
+      
+      // Box body
+      ctx.fillStyle = '#8B7355';
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+      // Box top
+      ctx.fillStyle = '#A0826D';
+      ctx.fillRect(box.x, box.y, box.w, 6);
+      // Box tape
+      ctx.fillStyle = '#D2B48C';
+      ctx.fillRect(box.x + box.w / 2 - 3, box.y, 6, box.h);
+      // Box shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(box.x + 2, box.y + box.h - 4, box.w - 4, 4);
+    });
+
+    // Office chairs
+    const chairPositions = [400, 1000, 1600, 2200, 2800, 3400];
+    chairPositions.forEach(cx => {
+      if (cx < this.camera.x - 50 || cx > this.camera.x + CANVAS_WIDTH + 50) return;
+      
+      const cy = CANVAS_HEIGHT - TILE - 40;
+      // Chair seat
+      ctx.fillStyle = '#2c2c2c';
+      ctx.fillRect(cx, cy + 20, 24, 8);
+      // Chair back
+      ctx.fillRect(cx + 18, cy, 6, 20);
+      // Chair leg
+      ctx.fillStyle = '#555';
+      ctx.fillRect(cx + 10, cy + 28, 4, 12);
+    });
+
+    // Section signs
+    const signs = [
+      { x: 100, text: 'ОФИС', color: '#4ade80' },
+      { x: 900, text: 'СКЛАД', color: '#60a5fa' },
+      { x: 1700, text: 'АРХИВ', color: '#fbbf24' },
+      { x: 2500, text: 'СЕРВЕРНАЯ', color: '#f472b6' },
+      { x: 3300, text: 'ШЕФ', color: '#ef4444' },
+    ];
+
+    signs.forEach(sign => {
+      if (sign.x < this.camera.x - 100 || sign.x > this.camera.x + CANVAS_WIDTH + 100) return;
+      
+      const sy = 80;
+      // Sign post
+      ctx.fillStyle = '#666';
+      ctx.fillRect(sign.x + 20, sy, 4, 60);
+      // Sign board
+      ctx.fillStyle = '#333';
+      ctx.fillRect(sign.x, sy - 20, 44, 24);
+      ctx.strokeStyle = sign.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sign.x, sy - 20, 44, 24);
+      // Text
+      ctx.fillStyle = sign.color;
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(sign.text, sign.x + 4, sy - 4);
+    });
   }
 
   renderCollectibles(ctx: CanvasRenderingContext2D) {
@@ -873,18 +1015,18 @@ export class GameEngine {
     ctx.font = 'bold 14px monospace';
     ctx.fillText(`📄 Документы: ${this.docsCollected} / ${DOCS_TOTAL}`, 20, 32);
 
-    // HP
+    // HP - wider panel for 10 HP
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, 50, 150, 25);
+    ctx.fillRect(10, 50, 220, 25);
     ctx.strokeStyle = '#ff4444';
-    ctx.strokeRect(10, 50, 150, 25);
+    ctx.strokeRect(10, 50, 220, 25);
 
     ctx.fillStyle = '#ff4444';
     ctx.font = 'bold 12px monospace';
     ctx.fillText('❤️ HP:', 18, 67);
     for (let i = 0; i < this.player.maxHp; i++) {
       ctx.fillStyle = i < this.player.hp ? '#ff4444' : '#333';
-      ctx.fillRect(70 + i * 16, 56, 12, 12);
+      ctx.fillRect(70 + i * 14, 56, 10, 12);
     }
   }
 

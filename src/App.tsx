@@ -176,7 +176,7 @@ function App() {
             </h2>
             <p style={{ fontSize: '1.25rem', color: '#4ade80', marginBottom: '0.5rem', fontFamily: 'monospace' }}>TENOS повержен!</p>
             <p style={{ fontSize: '1rem', color: '#ffffff', marginBottom: '1.5rem', fontFamily: 'monospace' }}>
-              Документов собрано: {docsCount} / 50
+              Документов собрано: {docsCount} / 60
             </p>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button onClick={restartGame} style={{
